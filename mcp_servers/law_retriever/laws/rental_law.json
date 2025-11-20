@@ -1,0 +1,18 @@
+{
+  "domain": "LAU",
+  "articles": [
+    {
+      "id": "LAU_36",
+      "title": "Fianza",
+      "text": "La fianza en arrendamientos de vivienda será equivalente a una mensualidad de renta.",
+      "keywords": ["fianza", "depósito", "garantía"],
+      "notes": "Aplicable a arrendamientos de vivienda."
+    },
+    {
+      "id": "LAU_9",
+      "title": "Duración",
+      "text": "La duración del arrendamiento será la pactada por las partes, salvo otras disposiciones.",
+      "keywords": ["duración", "plazo", "contrato"]
+    }
+  ]
+}
