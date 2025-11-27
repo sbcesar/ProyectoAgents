@@ -1,0 +1,200 @@
+{
+  "domain": "TOS",
+  "articles": [
+    {
+      "id": "TOS_1",
+      "title": "Publicidad Ilícita",
+      "text": "Se considera publicidad ilícita la que atenta contra la dignidad de la persona o contiene discriminaciones por razón de raza, origen, sexo, religión, estado civil, discapacidad o enfermedad.",
+      "keywords": [
+        "publicidad",
+        "ilícita",
+        "discriminación",
+        "ley"
+      ],
+      "notes": "Artículos 3 y 4 de la Ley 34/1988",
+      "source_law": "Ley 34/1988, Art. 3, 4"
+    },
+    {
+      "id": "TOS_2",
+      "title": "Responsabilidad del Prestador",
+      "text": "El prestador de servicios de la sociedad de la información que almacene datos proporcionados por el destinatario no será responsable por la información almacenada a solicitud del destinatario.",
+      "keywords": [
+        "responsabilidad",
+        "servicios",
+        "información",
+        "datos"
+      ],
+      "notes": "Artículo 16 de la Ley 34/1988",
+      "source_law": "LSSI - Art. 16"
+    },
+    {
+      "id": "TOS_3",
+      "title": "Publicidad Identificable",
+      "text": "El prestador debe asegurar que toda publicidad sea claramente identificable como tal. Debe indicarse la persona en cuyo nombre se realiza. El correo electrónico publicitario debe identificarse desde el asunto.",
+      "keywords": [
+        "publicidad",
+        "identificable",
+        "correo",
+        "claro"
+      ],
+      "notes": "Artículos 20-21 de la Ley 34/1988",
+      "source_law": "LSSI - Art. 20-21"
+    },
+    {
+      "id": "TOS_4",
+      "title": "Derechos del Consumidor en Comercio Electrónico",
+      "text": "Los consumidores tienen derecho a recibir información clara y completa sobre los bienes y servicios. El proveedor debe facilitar la identificación del negocio y sus datos de contacto.",
+      "keywords": [
+        "consumidor",
+        "derecho",
+        "información",
+        "comercio"
+      ],
+      "notes": "Artículos 12-15 de la Ley 34/1988",
+      "source_law": "LSSI - Art. 12-15"
+    },
+    {
+      "id": "TOS_5",
+      "title": "Desistimiento en Comercio Electrónico",
+      "text": "El consumidor tiene derecho a desistir del contrato en un plazo de catorce días naturales sin penalización, excepto en casos especiales establecidos por ley.",
+      "keywords": [
+        "desistimiento",
+        "devolución",
+        "días",
+        "plazo"
+      ],
+      "notes": "Directiva 2011/83/UE (Derecho de Desistimiento)",
+      "source_law": "Dir. 2011/83/UE"
+    },
+    {
+      "id": "TOS_6",
+      "title": "Protección de Datos Personales",
+      "text": "Todo tratamiento de datos personales debe cumplir con el Reglamento General de Protección de Datos (RGPD). El usuario tiene derecho a acceder, rectificar, suprimir y portar sus datos.",
+      "keywords": [
+        "datos",
+        "privacidad",
+        "RGPD",
+        "protección"
+      ],
+      "notes": "Reglamento (UE) 2016/679 y Ley Orgánica 3/2018",
+      "source_law": "RGPD - Ley Orgánica 3/2018"
+    },
+    {
+      "id": "TOS_7",
+      "title": "Consentimiento para Datos",
+      "text": "Se requiere consentimiento previo, informado y explícito del interesado para el tratamiento de datos. El consentimiento debe ser libremente dado sin presiones.",
+      "keywords": [
+        "consentimiento",
+        "datos",
+        "privacidad",
+        "autorización"
+      ],
+      "notes": "Artículo 6 del RGPD",
+      "source_law": "RGPD, Art. 6"
+    },
+    {
+      "id": "TOS_8",
+      "title": "Cláusulas Abusivas",
+      "text": "Se consideran abusivas las cláusulas que crean desequilibrio significativo entre los derechos y obligaciones del consumidor. El tribunal puede anularlas.",
+      "keywords": [
+        "abusiva",
+        "cláusula",
+        "nula",
+        "desequilibrio"
+      ],
+      "notes": "Artículos 82-91 de la Ley 34/1988",
+      "source_law": "Ley 34/1988, Art. 82-91"
+    },
+    {
+      "id": "TOS_9",
+      "title": "Garantía de Conformidad",
+      "text": "Los bienes deben ser conformes con el contrato. En caso de no conformidad, el vendedor debe reparar o reemplazar el bien. El derecho de garantía es de dos años.",
+      "keywords": [
+        "garantía",
+        "conformidad",
+        "defecto",
+        "reparación"
+      ],
+      "notes": "Directiva 2015/2302/UE",
+      "source_law": "Dir. 2015/2302/UE"
+    },
+    {
+      "id": "TOS_10",
+      "title": "Responsabilidad Limitada",
+      "text": "La limitación de responsabilidad no es válida cuando se refiere a muerte, lesiones personales o daño causado intencionadamente o por negligencia grave del proveedor.",
+      "keywords": [
+        "responsabilidad",
+        "limitación",
+        "daño",
+        "negligencia"
+      ],
+      "notes": "Ley 34/1988 y jurisprudencia",
+      "source_law": "Ley 34/1988"
+    },
+    {
+      "id": "TOS_11",
+      "title": "Suspensión de Servicios",
+      "text": "El proveedor puede suspender un servicio si el usuario incumple las obligaciones. Debe notificar al usuario con antelación razonable, excepto en casos de urgencia.",
+      "keywords": [
+        "suspensión",
+        "servicio",
+        "incumplimiento",
+        "terminación"
+      ],
+      "notes": "Buena práctica en LSSI",
+      "source_law": "LSSI"
+    },
+    {
+      "id": "TOS_12",
+      "title": "Modificación de Términos",
+      "text": "El proveedor puede modificar los términos de servicio. Debe notificar con antelación suficiente. El usuario puede rescindir si la modificación es sustancial.",
+      "keywords": [
+        "modificación",
+        "cambios",
+        "términos",
+        "notificación"
+      ],
+      "notes": "Práctica estándar en LSSI",
+      "source_law": "LSSI"
+    },
+    {
+      "id": "TOS_13",
+      "title": "Ley Aplicable",
+      "text": "Los contratos electrónicos se rigen por la ley del país donde esté domiciliado el consumidor o según pacten las partes. En consumidor, prevalece la ley más protectora.",
+      "keywords": [
+        "ley",
+        "aplicable",
+        "jurisdicción",
+        "país"
+      ],
+      "notes": "Artículo 20 de la LSSI",
+      "source_law": "LSSI, Art. 20"
+    },
+    {
+      "id": "TOS_14",
+      "title": "Resolución de Disputas",
+      "text": "Las partes pueden recurrir a medios de resolución alternativa de conflictos (mediación, arbitraje). Los juzgados competentes son los del lugar de domicilio del demandado.",
+      "keywords": [
+        "disputas",
+        "arbitraje",
+        "mediación",
+        "tribunal"
+      ],
+      "notes": "Ley 34/1988 y Ley de Arbitraje",
+      "source_law": "Ley 34/1988"
+    },
+    {
+      "id": "TOS_15",
+      "title": "Protección de Menores",
+      "text": "Está prohibido dirigir servicios explícitamente a menores sin consentimiento de sus padres. Se debe verificar la edad del usuario. Los datos de menores merecen protección especial.",
+      "keywords": [
+        "menores",
+        "protección",
+        "edad",
+        "consentimiento"
+      ],
+      "notes": "Artículo 8 del RGPD",
+      "source_law": "RGPD, Art. 8"
+    }
+  ]
+}

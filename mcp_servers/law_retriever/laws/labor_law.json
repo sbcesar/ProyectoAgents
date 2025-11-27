@@ -1,0 +1,199 @@
+{
+  "domain": "LAB",
+  "articles": [
+    {
+      "id": "LAB_1",
+      "title": "Relación Laboral",
+      "text": "Habrá relación laboral cuando una persona natural presta servicios retribuidos por cuenta ajena y dentro del ámbito de organización y dirección de otra persona, física o jurídica.",
+      "keywords": [
+        "relación",
+        "laboral",
+        "servicios",
+        "contrato"
+      ],
+      "notes": "Artículo 1 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 1"
+    },
+    {
+      "id": "LAB_2",
+      "title": "Capacidad para Contratar",
+      "text": "Podrán celebrar contrato de trabajo las personas con capacidad jurídica y de obrar, sin perjuicio de lo dispuesto en leyes especiales.",
+      "keywords": [
+        "capacidad",
+        "contrato",
+        "personas"
+      ],
+      "notes": "Artículo 7 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 7"
+    },
+    {
+      "id": "LAB_3",
+      "title": "Forma y Prueba del Contrato",
+      "text": "El contrato de trabajo puede celebrarse por escrito o de palabra. Se presume existente entre quien presta un servicio por cuenta y dentro del ámbito de organización y dirección de otro, y quien lo recibe.",
+      "keywords": [
+        "contrato",
+        "escrito",
+        "prueba",
+        "forma"
+      ],
+      "notes": "Artículo 8 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 8"
+    },
+    {
+      "id": "LAB_4",
+      "title": "Duración de la Jornada",
+      "text": "La jornada de trabajo no podrá exceder de cuarenta horas semanales de promedio en el período de referencia que se establezca en la negociación colectiva o en el contrato de trabajo.",
+      "keywords": [
+        "jornada",
+        "40 horas",
+        "tiempo",
+        "semana"
+      ],
+      "notes": "Artículo 34 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 34"
+    },
+    {
+      "id": "LAB_5",
+      "title": "Descanso Semanal",
+      "text": "Los trabajadores tienen derecho a un descanso semanal de día y medio ininterrumpido, que comprenderá la tarde del sábado o, en su caso, la mañana del lunes, y el domingo.",
+      "keywords": [
+        "descanso",
+        "semanal",
+        "domingo",
+        "libre"
+      ],
+      "notes": "Artículo 35 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 35"
+    },
+    {
+      "id": "LAB_6",
+      "title": "Vacaciones Anuales",
+      "text": "Los trabajadores tendrán derecho a disfrutar de un período de vacaciones anuales remuneradas de treinta días naturales. Las vacaciones no podrán ser sustituidas por una compensación económica, excepto en el caso de terminación de la relación laboral.",
+      "keywords": [
+        "vacaciones",
+        "descanso",
+        "remunerado",
+        "días"
+      ],
+      "notes": "Artículo 38 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 38"
+    },
+    {
+      "id": "LAB_7",
+      "title": "Salario Mínimo Interprofesional",
+      "text": "Los trabajadores tendrán como salario mínimo interprofesional el que se fije anualmente por el Gobierno. Este salario mínimo es de aplicación obligatoria a todos los contratos de trabajo.",
+      "keywords": [
+        "salario",
+        "mínimo",
+        "paga",
+        "remuneración"
+      ],
+      "notes": "Artículo 27 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 27"
+    },
+    {
+      "id": "LAB_8",
+      "title": "Protección contra Represalias",
+      "text": "Será nulo y sin efecto todo lo pactado por los trabajadores o empleadores, individual o colectivamente, que sea contrario a los derechos que reconocen las leyes laborales, aunque se celebre en forma de contrato individual o colectivo.",
+      "keywords": [
+        "protección",
+        "represalias",
+        "nulo",
+        "derecho"
+      ],
+      "notes": "Artículo 3 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 3"
+    },
+    {
+      "id": "LAB_9",
+      "title": "Despido Disciplinario",
+      "text": "El empleador puede despedir a un trabajador por incumplimiento grave y culpable de las obligaciones inherentes al contrato. El despido debe comunicarse por escrito e indicar los motivos. El trabajador podrá impugnar el despido.",
+      "keywords": [
+        "despido",
+        "terminación",
+        "motivo",
+        "impugnación"
+      ],
+      "notes": "Artículos 54-55 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 54-55"
+    },
+    {
+      "id": "LAB_10",
+      "title": "Indemnización por Despido Improcedente",
+      "text": "Si el despido es declarado improcedente, el trabajador tendrá derecho a una indemnización de cuarenta y cinco días de salario por año de servicio, con máximo de cuarenta y dos mensualidades.",
+      "keywords": [
+        "indemnización",
+        "despido",
+        "improcedente",
+        "compensación"
+      ],
+      "notes": "Artículo 56 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 56"
+    },
+    {
+      "id": "LAB_11",
+      "title": "Afiliación a la Seguridad Social",
+      "text": "Los trabajadores estarán obligados a afiliarse en la Seguridad Social, siendo responsabilidad del empleador realizar las gestiones necesarias. La cotización será efectuada sobre las bases establecidas.",
+      "keywords": [
+        "seguridad",
+        "social",
+        "afiliación",
+        "cotización"
+      ],
+      "notes": "Ley General de Seguridad Social - LGSS",
+      "source_law": "LGSS"
+    },
+    {
+      "id": "LAB_12",
+      "title": "Permisos Retribuidos",
+      "text": "Los trabajadores tendrán derecho a permisos retribuidos para ejercicio de funciones sindicales, realizando actividades de formación profesional acreditada o por circunstancias personales como matrimonio o nacimiento.",
+      "keywords": [
+        "permisos",
+        "retribuido",
+        "matrimonio",
+        "formación"
+      ],
+      "notes": "Artículos 37 y 46 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 37, 46"
+    },
+    {
+      "id": "LAB_13",
+      "title": "Suspensión del Contrato",
+      "text": "Las suspensiones previstas en la ley suspenderán el contrato de trabajo, cesando la obligación de prestación del trabajo del trabajador y la obligación de pago del salario por el empleador.",
+      "keywords": [
+        "suspensión",
+        "contrato",
+        "trabajo",
+        "salario"
+      ],
+      "notes": "Artículo 45 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 45"
+    },
+    {
+      "id": "LAB_14",
+      "title": "Resolución por Fuerza Mayor",
+      "text": "El empleador podrá despedir a un trabajador por causas económicas, técnicas, organizativas o de producción. Debe comunicar por escrito indicando la causa y el trabajador tiene derecho a indemnización.",
+      "keywords": [
+        "resolución",
+        "causa",
+        "económica",
+        "despido"
+      ],
+      "notes": "Artículo 52 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 52"
+    },
+    {
+      "id": "LAB_15",
+      "title": "Igualdad de Trato",
+      "text": "No podrá establecerse diferencias salariales por razón de sexo, origen, estado civil, raza, opinión política o religiosa, o por cualquier otra condición o circunstancia personal o social.",
+      "keywords": [
+        "igualdad",
+        "discriminación",
+        "trato",
+        "derecho"
+      ],
+      "notes": "Artículo 17 del Real Decreto Legislativo 2/2015",
+      "source_law": "RDLeg 2/2015, Art. 17"
+    }
+  ]
+}

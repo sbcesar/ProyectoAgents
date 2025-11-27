@@ -1,18 +1,199 @@
 {
-  "domain": "LAU",
+  "domain": "LAR",
   "articles": [
     {
-      "id": "LAU_36",
-      "title": "Fianza",
-      "text": "La fianza en arrendamientos de vivienda será equivalente a una mensualidad de renta.",
-      "keywords": ["fianza", "depósito", "garantía"],
-      "notes": "Aplicable a arrendamientos de vivienda."
+      "id": "LAR_1",
+      "title": "Objeto y Aplicación",
+      "text": "Esta ley regula los arrendamientos de vivienda y los arrendamientos de local de negocio celebrados entre persona física o jurídica propietaria de un bien inmueble y otra persona que lo toma en arrendamiento.",
+      "keywords": [
+        "vivienda",
+        "local",
+        "arrendamiento",
+        "objeto"
+      ],
+      "notes": "Artículo 1 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 1"
     },
     {
-      "id": "LAU_9",
-      "title": "Duración",
-      "text": "La duración del arrendamiento será la pactada por las partes, salvo otras disposiciones.",
-      "keywords": ["duración", "plazo", "contrato"]
+      "id": "LAR_2",
+      "title": "Vivienda: Concepto",
+      "text": "A los efectos de esta ley se entiende por vivienda todo edificio o parte del mismo que constituya una vivienda unifamiliar, un apartamento o una vivienda colectiva, habitualmente ocupada.",
+      "keywords": [
+        "vivienda",
+        "edificio",
+        "apartamento",
+        "habitación"
+      ],
+      "notes": "Artículo 2 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 2"
+    },
+    {
+      "id": "LAR_3",
+      "title": "Duración del Contrato",
+      "text": "El arrendamiento de vivienda tendrá una duración mínima de cinco años contados desde la constitución del contrato. El arrendador que sea persona física estará obligado a un mínimo de tres años.",
+      "keywords": [
+        "duración",
+        "5 años",
+        "mínimo",
+        "contrato"
+      ],
+      "notes": "Artículo 5 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 5"
+    },
+    {
+      "id": "LAR_4",
+      "title": "Prorrogas Automáticas",
+      "text": "El contrato se prorrogará obligatoriamente por períodos anuales dentro del período de cinco años, a menos que antes del mes anterior a su vencimiento, alguna de las partes comunique la no prórroga.",
+      "keywords": [
+        "prórroga",
+        "automática",
+        "vencimiento",
+        "renovación"
+      ],
+      "notes": "Artículo 9 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 9"
+    },
+    {
+      "id": "LAR_5",
+      "title": "Fianza",
+      "text": "El arrendatario podrá exigir al arrendador que deposite la fianza en la cuenta de depósito que se determine. La fianza será equivalente a dos mensualidades de renta.",
+      "keywords": [
+        "fianza",
+        "depósito",
+        "garantía",
+        "meses"
+      ],
+      "notes": "Artículo 36 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 36"
+    },
+    {
+      "id": "LAR_6",
+      "title": "Actualización de la Renta",
+      "text": "La renta será actualizada anualmente de acuerdo con la variación porcentual que experimente el Índice de Precios al Consumo. Las partes pueden pactar otro índice.",
+      "keywords": [
+        "renta",
+        "actualización",
+        "IPC",
+        "índice"
+      ],
+      "notes": "Artículo 18 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 18"
+    },
+    {
+      "id": "LAR_7",
+      "title": "Gastos del Arrendamiento",
+      "text": "Los gastos de la vivienda corren a cargo del arrendador. El arrendatario abonará el agua, electricidad, gas y otros servicios que utilice. Los impuestos sobre la vivienda corresponden al arrendador.",
+      "keywords": [
+        "gastos",
+        "servicios",
+        "agua",
+        "electricidad"
+      ],
+      "notes": "Artículo 21 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 21"
+    },
+    {
+      "id": "LAR_8",
+      "title": "Conservación y Reparación",
+      "text": "El arrendador es responsable de mantener la vivienda en condiciones de habitabilidad. El arrendador debe reparar dentro de veinte días, excepto en casos de urgencia.",
+      "keywords": [
+        "reparación",
+        "conservación",
+        "habitabilidad",
+        "mantenimiento"
+      ],
+      "notes": "Artículo 21 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 21"
+    },
+    {
+      "id": "LAR_9",
+      "title": "Resolución del Contrato",
+      "text": "El arrendatario puede resolver el contrato en cualquier momento, notificando al arrendador con treinta días de anticipación. El arrendador puede resolver solo por causas legales establecidas.",
+      "keywords": [
+        "resolución",
+        "terminación",
+        "rescisión",
+        "notificación"
+      ],
+      "notes": "Artículos 11 y 27 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 11, 27"
+    },
+    {
+      "id": "LAR_10",
+      "title": "Devolución de la Fianza",
+      "text": "El arrendador debe devolver la fianza más los intereses dentro de treinta días desde el término del arrendamiento, deduciendo los daños causados por el arrendatario.",
+      "keywords": [
+        "fianza",
+        "devolución",
+        "intereses",
+        "daños"
+      ],
+      "notes": "Artículo 37 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 37"
+    },
+    {
+      "id": "LAR_11",
+      "title": "Subarrendamiento",
+      "text": "El arrendatario puede subarrendar la vivienda siempre que no dispongan lo contrario las partes. En caso de subarrendamiento, el arrendatario sigue siendo responsable frente al arrendador.",
+      "keywords": [
+        "subarriendo",
+        "subarrendamiento",
+        "tercero"
+      ],
+      "notes": "Artículo 24 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 24"
+    },
+    {
+      "id": "LAR_12",
+      "title": "Cesión del Contrato",
+      "text": "El arrendatario no podrá ceder el contrato de arrendamiento sin consentimiento previo del arrendador. La cesión sin consentimiento constituye causa de resolución del contrato.",
+      "keywords": [
+        "cesión",
+        "contrato",
+        "consentimiento",
+        "transferencia"
+      ],
+      "notes": "Artículo 25 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 25"
+    },
+    {
+      "id": "LAR_13",
+      "title": "Cambio de Dominio de la Vivienda",
+      "text": "En caso de venta de la vivienda arrendada, el comprador sucede al vendedor en los derechos y obligaciones derivados del contrato de arrendamiento.",
+      "keywords": [
+        "venta",
+        "propiedad",
+        "transferencia",
+        "comprador"
+      ],
+      "notes": "Artículo 15 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 15"
+    },
+    {
+      "id": "LAR_14",
+      "title": "Acciones por Impago",
+      "text": "El arrendador puede ejercitar las acciones legales para el cobro de las rentas impagadas. La falta de pago durante dos meses es causa de resolución del contrato.",
+      "keywords": [
+        "impago",
+        "renta",
+        "cobro",
+        "deuda"
+      ],
+      "notes": "Artículo 27 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 27"
+    },
+    {
+      "id": "LAR_15",
+      "title": "Contrato Escrito",
+      "text": "El contrato de arrendamiento de vivienda consta de documento público o privado. Debe contener datos identificativos, descripción de la vivienda, duración, renta y condiciones.",
+      "keywords": [
+        "contrato",
+        "escrito",
+        "documento",
+        "condiciones"
+      ],
+      "notes": "Artículo 12 de la Ley 4/2013",
+      "source_law": "Ley 4/2013, Art. 12"
     }
   ]
 }
