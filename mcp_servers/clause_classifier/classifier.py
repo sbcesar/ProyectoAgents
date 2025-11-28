@@ -93,7 +93,7 @@ class ClauseClassifier:
         ClauseType.PRIVACY: {
             "keywords": [
                 "datos personales", "privacidad", "confidencialidad", "información",
-                "RGPD", "protección de datos", "consentimiento", "tratamiento",
+                "rgpd", "protección de datos", "consentimiento", "tratamiento",
                 "procesamiento", "acceso", "portabilidad"
             ],
             "red_flags": [
@@ -105,11 +105,12 @@ class ClauseClassifier:
         ClauseType.PAYMENT: {
             "keywords": [
                 "salario", "pago", "precio", "tarifa", "compensación", "honorarios",
-                "renta", "cuota", "arancel", "remuneración", "sueldo"
+                "renta", "cuota", "arancel", "remuneración", "sueldo", "horas"
             ],
             "red_flags": [
                 "sin pago", "reducción unilateral", "penalización", "deuda perpetua",
-                "cambio sin notificación", "aumento ilimitado", "indexado infinito"
+                "cambio sin notificación", "aumento ilimitado", "indexado infinito",
+                "sin compensación"
             ]
         },
         ClauseType.MODIFICATION: {
@@ -174,6 +175,7 @@ class ClauseClassifier:
     def split_clauses(contract_text: str) -> List[str]:
         """
         Divide un contrato en cláusulas individuales.
+        MEJORADO: Divide mejor por numeración y luego por párrafos.
         
         Args:
             contract_text: Texto del contrato completo
@@ -181,28 +183,42 @@ class ClauseClassifier:
         Returns:
             Lista de cláusulas
         """
-        # Separar por saltos de línea dobles y limpiar
         clauses = []
         
-        # Intentar dividir por números romanos (I., II., III., etc.)
-        roman_pattern = r'(?:^|\n)(?:I|II|III|IV|V|VI|VII|VIII|IX|X)[\.\-]\s+'
-        if re.search(roman_pattern, contract_text, re.MULTILINE):
-            clauses = re.split(roman_pattern, contract_text)
+        # Limpiar el texto
+        contract_text = contract_text.strip()
         
-        # Si no hay, intentar por números (1., 2., 3., etc.)
-        elif re.search(r'(?:^|\n)(\d+)[\.\-]\s+', contract_text, re.MULTILINE):
-            clauses = re.split(r'(?:^|\n)(?:\d+)[\.\-]\s+', contract_text)
+        # Intentar dividir por números (1., 2., 3., etc.)
+        if re.search(r'^\s*\d+[\.\-]\s+', contract_text, re.MULTILINE):
+            # Dividir por patrón de número al inicio de línea
+            parts = re.split(r'^\s*(\d+)[\.\-]\s+', contract_text, flags=re.MULTILINE)
+            
+            # Reconstruir cláusulas (parts[0] es vacío, luego número, texto, número, texto...)
+            for i in range(1, len(parts), 2):
+                if i + 1 < len(parts):
+                    clause_num = parts[i]
+                    clause_text = parts[i + 1].strip()
+                    if clause_text and len(clause_text) > 10:
+                        clauses.append(clause_text)
         
-        # Si no hay, dividir por saltos dobles
+        # Si no hay, intentar dividir por saltos dobles
         elif '\n\n' in contract_text:
-            clauses = contract_text.split('\n\n')
+            clauses = [c.strip() for c in contract_text.split('\n\n')]
         
-        # Última opción: dividir por puntos seguidos
-        else:
+        # Si no hay, dividir por puntos seguidos de mayúscula
+        elif re.search(r'(?<=[.!?])\s+(?=[A-Z])', contract_text):
             clauses = re.split(r'(?<=[.!?])\s+(?=[A-Z])', contract_text)
         
-        # Limpiar cláusulas vacías y normalizar
-        clauses = [c.strip() for c in clauses if c.strip() and len(c.strip()) > 20]
+        # Última opción: dividir por saltos de línea simples
+        else:
+            clauses = contract_text.split('\n')
+        
+        # Limpiar cláusulas vacías, muy pequeñas y normalizar
+        clauses = [
+            c.strip() 
+            for c in clauses 
+            if c.strip() and len(c.strip()) > 15  # Mínimo 15 caracteres
+        ]
         
         return clauses
     
@@ -249,6 +265,7 @@ class ClauseClassifier:
     def calculate_risk_level(clause_text: str, clause_type: ClauseType) -> Tuple[RiskLevel, float]:
         """
         Calcula el nivel de riesgo de una cláusula.
+        MEJORADO: Puntuación más agresiva para detectar alto riesgo.
         
         Args:
             clause_text: Texto de la cláusula
@@ -260,19 +277,21 @@ class ClauseClassifier:
         text_lower = clause_text.lower()
         risk_score = 0
         
-        # Palabras rojas de alto riesgo
+        # Palabras rojas de ALTO riesgo (más puntos)
         high_risk_terms = [
             "sin causa", "sin previo aviso", "unilateral", "a discreción",
             "sin responsabilidad", "sin garantía", "sin consentimiento",
             "perpetuo", "indefinido", "irrevocable", "inmodificable",
-            "se proporciona tal cual", "renuncia de derechos"
+            "se proporciona tal cual", "renuncia de derechos", "renuncia a",
+            "sin compensación", "inmediatamente", "discrecional", "arbitraria",
+            "exención", "limitación de responsabilidad"
         ]
         
         for term in high_risk_terms:
             if term in text_lower:
-                risk_score += 25
+                risk_score += 30  # AUMENTADO de 25
         
-        # Palabras de riesgo medio
+        # Palabras de riesgo MEDIO
         medium_risk_terms = [
             "modificación", "cambio", "arbitraje", "limitación",
             "penalización", "actualización", "revisión"
@@ -280,23 +299,27 @@ class ClauseClassifier:
         
         for term in medium_risk_terms:
             if term in text_lower:
-                risk_score += 10
+                risk_score += 15
         
         # Longitud anormalmente larga = más riesgo
         if len(clause_text) > 500:
-            risk_score += 15
+            risk_score += 20  # AUMENTADO de 15
         
         # Terminología confusa o legal compleja
-        complex_terms = len(re.findall(r'\b[a-z]+(?:ción|dad|miento)\b', text_lower))
-        risk_score += min(complex_terms * 2, 20)
+        complex_terms = len(re.findall(r'\b[a-záéíóúñ]+(?:ción|dad|miento)\b', text_lower))
+        risk_score += min(complex_terms * 3, 30)  # AUMENTADO
+        
+        # Si no hay palabras clave pero el tipo es riesgoso, aumentar score
+        if risk_score < 10 and clause_type in [ClauseType.TERMINATION, ClauseType.LIABILITY]:
+            risk_score = 20  # Mínimo base para tipos riesgosos
         
         # Limitar a 100
         risk_score = min(risk_score, 100)
         
-        # Determinar nivel
-        if risk_score >= 60:
+        # Determinar nivel (umbrales más bajos para ser más sensible)
+        if risk_score >= 50:  # BAJADO de 60
             risk_level = RiskLevel.HIGH
-        elif risk_score >= 30:
+        elif risk_score >= 25:  # BAJADO de 30
             risk_level = RiskLevel.MEDIUM
         else:
             risk_level = RiskLevel.LOW
@@ -318,7 +341,8 @@ class ClauseClassifier:
         stop_words = {
             "el", "la", "de", "y", "a", "en", "del", "que", "por", "es",
             "se", "los", "las", "al", "una", "un", "este", "esta", "este",
-            "será", "puede", "debe", "pueden", "deben"
+            "será", "puede", "debe", "pueden", "deben", "son", "está",
+            "han", "sea", "sin", "con", "para", "por", "como", "más"
         }
         
         # Extraer palabras significativas
@@ -374,17 +398,17 @@ class ClauseClassifier:
         """Genera descripción del problema legal."""
         issues = {
             ClauseType.TERMINATION: {
-                RiskLevel.HIGH: "Rescisión unilateral sin causa y sin previo aviso",
+                RiskLevel.HIGH: "Rescisión unilateral sin causa y sin previo aviso - VIOLACIÓN de derechos laborales",
                 RiskLevel.MEDIUM: "Terminación con condiciones no estándar",
                 RiskLevel.LOW: "Procedimiento de terminación claro"
             },
             ClauseType.LIABILITY: {
-                RiskLevel.HIGH: "Limitación de responsabilidad indebida o injusta",
+                RiskLevel.HIGH: "Limitación de responsabilidad indebida o injusta - ABUSIVA",
                 RiskLevel.MEDIUM: "Limitación de responsabilidad moderada",
                 RiskLevel.LOW: "Limitación de responsabilidad razonable"
             },
             ClauseType.PRIVACY: {
-                RiskLevel.HIGH: "Recopilación indefinida de datos sin consentimiento",
+                RiskLevel.HIGH: "Recopilación indefinida de datos sin consentimiento - VIOLACIÓN RGPD",
                 RiskLevel.MEDIUM: "Tratamiento de datos con limitaciones",
                 RiskLevel.LOW: "Protección de datos conforme a RGPD"
             },
@@ -394,22 +418,22 @@ class ClauseClassifier:
                 RiskLevel.LOW: "Precios fijos durante el contrato"
             },
             ClauseType.MODIFICATION: {
-                RiskLevel.HIGH: "Modificación unilateral sin consentimiento",
+                RiskLevel.HIGH: "Modificación unilateral sin consentimiento - ABUSIVA",
                 RiskLevel.MEDIUM: "Modificación con previo aviso",
                 RiskLevel.LOW: "Modificación por acuerdo mutuo"
             },
             ClauseType.ARBITRATION: {
-                RiskLevel.HIGH: "Arbitraje obligatorio sin derecho a tribunal",
+                RiskLevel.HIGH: "Arbitraje obligatorio sin derecho a tribunal - LIMITACIÓN DE DERECHOS",
                 RiskLevel.MEDIUM: "Mediación como primer paso",
                 RiskLevel.LOW: "Resolución alternativa de disputas"
             },
             ClauseType.DURATION: {
-                RiskLevel.HIGH: "Duración indefinida o perpetua",
+                RiskLevel.HIGH: "Duración indefinida o perpetua - SIN SALIDA",
                 RiskLevel.MEDIUM: "Renovación automática con salida",
                 RiskLevel.LOW: "Duración definida con opción de renovación"
             },
             ClauseType.RESTRICTIONS: {
-                RiskLevel.HIGH: "Restricción perpetua e ilimitada",
+                RiskLevel.HIGH: "Restricción perpetua e ilimitada - ABUSIVA",
                 RiskLevel.MEDIUM: "Restricción temporal o limitada",
                 RiskLevel.LOW: "Restricción razonable y limitada"
             }
@@ -423,12 +447,12 @@ class ClauseClassifier:
         recommendations = []
         
         if risk_level == RiskLevel.HIGH:
-            recommendations.append("⚠️ REVISAR CON ABOGADO: Esta cláusula presenta riesgos significativos")
-            recommendations.append("📋 No firmes sin negociar los términos")
-            recommendations.append("💬 Solicita aclaraciones específicas")
+            recommendations.append("⚠️ CRÍTICO: REVISAR CON ABOGADO - Riesgos significativos")
+            recommendations.append("📋 NO FIRMES sin negociar esta cláusula")
+            recommendations.append("💬 Solicita cambios ANTES de firmar")
         
         elif risk_level == RiskLevel.MEDIUM:
-            recommendations.append("⚠️ REVISAR: Asegúrate de entender completamente esta cláusula")
+            recommendations.append("⚠️ REVISAR: Asegúrate de entender esta cláusula")
             recommendations.append("📋 Considera solicitar cambios en los términos")
         
         else:
@@ -437,16 +461,16 @@ class ClauseClassifier:
         
         # Recomendaciones específicas por tipo
         if clause_type == ClauseType.TERMINATION:
-            recommendations.append("💡 Busca cláusulas que especifiquen los motivos válidos de terminación")
+            recommendations.append("💡 Exige que se especifiquen los motivos válidos de terminación")
         
         elif clause_type == ClauseType.LIABILITY:
-            recommendations.append("💡 Verifica si se cubren todas las formas de daño")
+            recommendations.append("💡 Verifica cobertura completa de daños y responsabilidades")
         
         elif clause_type == ClauseType.PRIVACY:
-            recommendations.append("💡 Verifica derechos de acceso, rectificación y eliminación de datos")
+            recommendations.append("💡 Exige derechos de acceso, rectificación y eliminación de datos")
         
         elif clause_type == ClauseType.MODIFICATION:
-            recommendations.append("💡 Asegúrate de que requiere tu consentimiento para cambios importantes")
+            recommendations.append("💡 Requiere TU consentimiento para cambios importantes")
         
         return recommendations[:3]  # Máximo 3 recomendaciones
     

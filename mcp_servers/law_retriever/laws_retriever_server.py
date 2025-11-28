@@ -235,23 +235,13 @@ async def call_tool(tool_name: str, params: dict | None = None) -> dict:
 
 
 # ============================================================
-# TOOL MCP: law_lookup
+# TOOL MCP: law_lookup (MEJORADO)
 # ============================================================
 
 async def law_lookup(tool_name: str, params: dict | None = None) -> dict:
     """
-    Busca artículos legales por keyword.
-    
-    Params:
-        {"topic": "fianza"}
-    
-    Devuelve:
-        {
-            "status": "ok",
-            "query": "fianza",
-            "total_results": 1,
-            "results": [...]
-        }
+    Busca artículos legales por keyword (Búsqueda inteligente).
+    Rompe la frase en palabras clave y busca coincidencias.
     """
     if not params:
         params = {}
@@ -261,35 +251,66 @@ async def law_lookup(tool_name: str, params: dict | None = None) -> dict:
     if not topic:
         return {
             "status": "error",
-            "message": "Topic parameter is required and cannot be empty",
+            "message": "Topic parameter is required",
             "results": []
         }
     
-    results = []
+    # 1. Romper la frase en palabras clave (tokens)
+    # Ignoramos palabras cortas (de, el, la, en...)
+    query_tokens = [word for word in topic.split() if len(word) > 3]
+    
+    # Si no quedan tokens (ej: "el de la"), usamos la frase original
+    if not query_tokens:
+        query_tokens = [topic]
+
+    scored_results = []
     
     for entry in LAWS:
+        # Unir todo el texto del artículo para buscar
         title = str(entry.get("title", "")).lower()
         text = str(entry.get("text", "")).lower()
         keywords = [str(k).lower() for k in entry.get("keywords", [])]
         notes = str(entry.get("notes", "")).lower()
         
-        # Buscar en título, texto, keywords y notas
-        if (
-            topic in title
-            or topic in text
-            or any(topic in kw for kw in keywords)
-            or topic in notes
-        ):
-            results.append(entry)
+        full_content = f"{title} {text} {' '.join(keywords)} {notes}"
+        
+        # 2. Calcular puntuación de relevancia
+        score = 0
+        matches = []
+        
+        for token in query_tokens:
+            if token in full_content:
+                score += 1
+                matches.append(token)
+        
+        # 3. Si hay coincidencia relevante, guardar
+        if score > 0:
+            # Bonus si está en el título
+            if any(token in title for token in query_tokens):
+                score += 2
+                
+            scored_results.append({
+                "law": entry,
+                "score": score,
+                "matches": matches
+            })
     
-    logger.info(f"Query '{topic}' returned {len(results)} result(s)")
+    # 4. Ordenar por relevancia (score más alto primero)
+    scored_results.sort(key=lambda x: x["score"], reverse=True)
+    
+    # 5. Quedarse solo con los datos de la ley (limpiar scores)
+    final_results = [item["law"] for item in scored_results]
+    
+    logger.info(f"Query '{topic}' (Tokens: {query_tokens}) returned {len(final_results)} result(s)")
     
     return {
         "status": "ok",
         "query": topic,
-        "total_results": len(results),
-        "results": results
+        "tokens_used": query_tokens,
+        "total_results": len(final_results),
+        "results": final_results[:5] # Devolver solo el Top 5 para no saturar
     }
+
 
 
 # ============================================================

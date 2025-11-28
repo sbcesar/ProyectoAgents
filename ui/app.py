@@ -1,264 +1,218 @@
+#!/usr/bin/env python3
 """
-Contract Guardian - Auditor de Contratos con IA
-Interfaz Gradio que analiza contratos usando el MCP Server de law_retriever
+ui/agent_interface_v2.py
 
-REQUISITOS:
-    pip install gradio requests python-dotenv
-
-USO:
-    python ui/app.py
-
-Asegúrate de que law_retriever está corriendo:
-    python mcp_servers/law_retriever/server.py
+Interfaz gráfica profesional con Gradio
+Soporta:
+- Streaming en tiempo real (pensamiento del LLM)
+- Upload de PDF
+- Visualización de pasos del agente
+- Reporte HTML final
 """
 
 import gradio as gr
-import requests
+import asyncio
 import json
 import logging
-from typing import List, Dict, Tuple
+import sys
 from pathlib import Path
+
+# Añadir directorio raíz al path para importar módulos
+sys.path.append(str(Path(__file__).parent.parent))
+
+from agent.orchestrator import orchestrator
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================================
-# CONFIGURACIÓN
+# LÓGICA DE LA INTERFAZ
 # ============================================================
 
-LAW_RETRIEVER_URL = "http://localhost:8001/law_lookup"
-LAW_RETRIEVER_HEALTH = "http://localhost:8001/health"
+# En ui/agent_interface_v2.py
 
-# Palabras clave de riesgo automáticas a buscar
-RISK_KEYWORDS = {
-    "alto": ["cláusula abusiva", "limitación responsabilidad", "rescisión unilateral", 
-             "despido", "terminación", "renuncia derechos", "confidencialidad perpetua"],
-    "medio": ["modificación términos", "suspensión servicio", "cambio condiciones",
-              "arbitraje obligatorio", "jurisdicción extranjera", "penalización"],
-    "bajo": ["actualización anual", "revisión precios", "prórroga automática", "notificación"]
-}
-
-# ============================================================
-# FUNCIONES AUXILIARES
-# ============================================================
-
-def check_law_retriever_health() -> bool:
-    """Verifica si el servidor law_retriever está disponible."""
-    try:
-        response = requests.get(LAW_RETRIEVER_HEALTH, timeout=2)
-        return response.status_code == 200
-    except Exception as e:
-        logger.error(f"Law retriever no disponible: {e}")
-        return False
-
-
-def search_law_articles(topic: str) -> Dict:
+async def run_analysis(pdf_file):
     """
-    Busca artículos legales en el servidor law_retriever.
-    
-    Args:
-        topic: Palabra clave a buscar
-        
-    Returns:
-        Dict con resultados o error
+    Ejecuta el análisis del contrato conectando con el Orchestrator.
+    Es un generador asíncrono para streaming de datos a la UI.
     """
-    try:
-        response = requests.post(
-            LAW_RETRIEVER_URL,
-            json={"topic": topic.lower().strip()},
-            timeout=5
-        )
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Error en law_retriever: {response.status_code}")
-            return {"status": "error", "results": []}
-            
-    except requests.exceptions.ConnectionError:
-        logger.error("No se puede conectar a law_retriever")
-        return {
-            "status": "error",
-            "message": "❌ No se puede conectar al servidor law_retriever. ¿Está ejecutándose en localhost:8001?"
+    if pdf_file is None:
+        yield {
+            status_md: "⚠️ **Por favor, sube un archivo PDF para comenzar.**",
+            live_log: "",
+            html_report: "",
+            json_result: None
         }
-    except Exception as e:
-        logger.error(f"Error buscando leyes: {e}")
-        return {"status": "error", "results": []}
+        return
 
-
-def extract_risk_keywords(contract_text: str) -> Dict[str, List[str]]:
-    """
-    Extrae palabras clave de riesgo encontradas en el contrato.
+    # Estado inicial
+    current_log = "🚀 **Iniciando Agente MCP...**\n\n"
     
-    Args:
-        contract_text: Texto del contrato
-        
-    Returns:
-        Dict con palabras encontradas por nivel de riesgo
-    """
-    text_lower = contract_text.lower()
-    found_risks = {"alto": [], "medio": [], "bajo": []}
+    # Variables para acumular el texto de cada sección
+    section_initial = ""
+    section_reasoning = ""
+    section_recommendations = ""
     
-    for risk_level, keywords in RISK_KEYWORDS.items():
-        for keyword in keywords:
-            if keyword.lower() in text_lower and keyword not in found_risks[risk_level]:
-                found_risks[risk_level].append(keyword)
+    # Texto completo que se mostrará en el log
+    full_display_text = ""
     
-    return found_risks
-
-
-def analyze_contract(contract_text: str, search_mode: str = "auto") -> Tuple[str, str]:
-    """
-    Analiza un contrato buscando cláusulas legales relevantes.
-    
-    Args:
-        contract_text: Texto del contrato
-        search_mode: "auto" para búsqueda automática, "manual" para términos específicos
-        
-    Returns:
-        Tuple con HTML de resultados y resumen
-    """
-    
-    if not contract_text or not contract_text.strip():
-        return (
-            "<p style='color: red;'>❌ Por favor ingresa un contrato</p>",
-            "Sin datos"
-        )
-    
-    # Verificar conexión con law_retriever
-    if not check_law_retriever_health():
-        return (
-            "<p style='color: red;'>❌ El servidor law_retriever no está disponible.</p>"
-            "<p>Inicia el servidor con: <code>python mcp_servers/law_retriever/server.py</code></p>",
-            "Error de conexión"
-        )
-    
-    # Extraer palabras clave de riesgo
-    risk_keywords = extract_risk_keywords(contract_text)
-    
-    # Determinar términos a buscar
-    search_terms = []
-    
-    if search_mode == "auto":
-        # Buscar automáticamente por palabras clave encontradas
-        for level in ["alto", "medio", "bajo"]:
-            search_terms.extend(risk_keywords[level])
-        
-        # Si no hay palabras clave, buscar términos generales
-        if not search_terms:
-            search_terms = ["contrato", "términos", "condiciones", "responsabilidad"]
-    else:
-        # Modo manual: buscar palabras generales
-        search_terms = ["contrato", "cláusula", "términos", "responsabilidad", 
-                       "confidencialidad", "cancelación", "terminación"]
-    
-    # Buscar cada término en law_retriever
-    html_output = "<div style='font-family: Arial, sans-serif;'>"
-    html_output += "<h2>📋 Análisis de Contrato</h2>"
-    
-    # Mostrar palabras de riesgo detectadas
-    if any(risk_keywords.values()):
-        html_output += "<h3>⚠️ Palabras de Riesgo Detectadas:</h3>"
-        
-        if risk_keywords["alto"]:
-            html_output += "<p style='color: red;'><b>Alto riesgo:</b> " + ", ".join(risk_keywords["alto"]) + "</p>"
-        if risk_keywords["medio"]:
-            html_output += "<p style='color: orange;'><b>Riesgo medio:</b> " + ", ".join(risk_keywords["medio"]) + "</p>"
-        if risk_keywords["bajo"]:
-            html_output += "<p style='color: green;'><b>Bajo riesgo:</b> " + ", ".join(risk_keywords["bajo"]) + "</p>"
-    
-    # Buscar artículos legales relevantes
-    html_output += "<h3>📚 Artículos Legales Encontrados:</h3>"
-    
-    total_results = 0
-    results_by_term = {}
-    
-    for term in set(search_terms):  # Evitar duplicados
-        result = search_law_articles(term)
-        
-        if result.get("status") == "ok" and result.get("results"):
-            results_by_term[term] = result["results"]
-            total_results += len(result["results"])
-    
-    if total_results == 0:
-        html_output += "<p style='color: gray;'>No se encontraron artículos legales coincidentes.</p>"
-    else:
-        # Mostrar resultados agrupados por término
-        for term, articles in sorted(results_by_term.items()):
-            html_output += f"<h4>📌 Búsqueda: <i>{term}</i></h4>"
+    try:
+        # Iterar sobre el stream del orchestrator
+        async for event in orchestrator.analyze_contract_streaming(pdf_file.name):
+            status = event.get("status")
             
-            for article in articles[:3]:  # Máximo 3 por término
-                domain = article.get("domain", "?")
-                title = article.get("title", "Sin título")
-                text = article.get("text", "")[:200]  # Primeros 200 caracteres
-                source = article.get("source_law", "N/A")
+            # --- LOGS DE ESTADO (MENSJES CORTOS) ---
+            if status in ["extracting", "analyzing", "extracting_terms", "mcp_calls", 
+                          "mcp_done", "reasoning", "recommendations", "generating_report"]:
                 
-                html_output += f"""
-                <div style='border-left: 4px solid #2196F3; padding-left: 10px; margin: 10px 0;'>
-                    <p><b>[{domain}] {title}</b></p>
-                    <p style='color: #666;'>{text}...</p>
-                    <p style='font-size: 0.85em; color: #999;'><i>Fuente: {source}</i></p>
-                </div>
-                """
-    
-    html_output += """
-    <div style='margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px;'>
-        <p style='font-size: 0.9em; color: #666;'>
-            <b>⚠️ Nota:</b> Esta herramienta es informativa. No constituye asesoría legal. 
-            Consulta con un abogado para interpretación legal.
-        </p>
-    </div>
-    </div>
-    """
-    
-    # Generar resumen
-    summary = f"Términos buscados: {len(set(search_terms))} | Artículos encontrados: {total_results}"
-    if risk_keywords["alto"]:
-        summary += f" | ⚠️ Alto riesgo: {len(risk_keywords['alto'])}"
-    
-    return html_output, summary
+                icon_map = {
+                    "extracting": "📄", "analyzing": "🤖", "extracting_terms": "🧠",
+                    "mcp_calls": "🌍", "mcp_done": "✅", "reasoning": "⚖️",
+                    "recommendations": "💡", "generating_report": "📊"
+                }
+                icon = icon_map.get(status, "👉")
+                current_log += f"{icon} {event['message']}...\n"
+                
+                # Si cambiamos de fase principal, añadimos cabecera al log visual
+                if status == "analyzing":
+                    full_display_text += "\n=== 🤖 ANÁLISIS INICIAL DEL LLM ===\n"
+                elif status == "reasoning":
+                    full_display_text += "\n\n=== ⚖️ RAZONAMIENTO LEGAL (VERIFICACIÓN) ===\n"
+                elif status == "recommendations":
+                    full_display_text += "\n\n=== 💡 RECOMENDACIONES ===\n"
+                
+                yield {status_md: current_log, live_log: full_display_text}
+
+            # --- STREAMING DE CONTENIDO (CHUNKS) ---
+            
+            # 1. Chunk de Análisis Inicial
+            elif status == "analyzing_chunk":
+                chunk = event.get("chunk", "")
+                if chunk:
+                    section_initial += chunk
+                    full_display_text += chunk
+                    yield {live_log: full_display_text}
+
+            # 2. Chunk de Razonamiento
+            elif status == "reasoning_chunk":
+                chunk = event.get("chunk", "")
+                if chunk:
+                    section_reasoning += chunk
+                    full_display_text += chunk
+                    yield {live_log: full_display_text}
+
+            # 3. Chunk de Recomendaciones
+            elif status == "recommendations_chunk":
+                chunk = event.get("chunk", "")
+                if chunk:
+                    section_recommendations += chunk
+                    full_display_text += chunk
+                    yield {live_log: full_display_text}
+
+            # --- FINALIZACIÓN ---
+            elif status == "complete":
+                current_log += "✨ **¡Análisis Completado!**"
+                result = event["result"]
+                
+                # Generar HTML final
+                final_html = generate_html(result)
+                
+                # Generar JSON final
+                final_json = {
+                    "summary": result.initial_analysis,
+                    "classification": result.mcp_classification,
+                    "laws": result.mcp_laws,
+                    "reasoning": result.llm_reasoning,
+                    "recommendations": result.recommendations,
+                    "risks": {
+                        "high": result.high_risk_count,
+                        "medium": result.medium_risk_count,
+                        "low": result.low_risk_count
+                    }
+                }
+                
+                yield {
+                    status_md: current_log,
+                    live_log: full_display_text, # Asegurar que el log final esté completo
+                    html_report: final_html,
+                    json_result: final_json
+                }
+
+            # ERROR HANDLING
+            elif status == "error":
+                current_log += f"\n❌ **ERROR:** {event['message']}"
+                yield {status_md: current_log}
+
+    except Exception as e:
+        logger.error(f"UI Error: {e}", exc_info=True)
+        yield {status_md: f"❌ Error crítico en UI: {str(e)}"}
 
 
-def quick_search_article(topic: str) -> str:
-    """
-    Búsqueda rápida de un artículo específico.
-    
-    Args:
-        topic: Término a buscar
+
+def generate_html(result):
+    """Genera el reporte visual HTML compatible con modo oscuro."""
+    return f"""
+    <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; color: inherit;">
         
-    Returns:
-        HTML con resultados formateados
-    """
-    
-    if not topic or not topic.strip():
-        return "<p style='color: red;'>Por favor ingresa un término de búsqueda</p>"
-    
-    result = search_law_articles(topic)
-    
-    if result.get("status") != "ok" or not result.get("results"):
-        return f"<p style='color: orange;'>No se encontraron resultados para '<b>{topic}</b>'</p>"
-    
-    html = f"<h3>Resultados para: <i>{topic}</i></h3>"
-    
-    for article in result.get("results", []):
-        domain = article.get("domain", "?")
-        title = article.get("title", "Sin título")
-        text = article.get("text", "")
-        keywords = article.get("keywords", [])
-        notes = article.get("notes", "")
-        source = article.get("source_law", "N/A")
-        
-        html += f"""
-        <div style='border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px;'>
-            <h4 style='margin: 0 0 10px 0; color: #2196F3;'>[{domain}] {title}</h4>
-            <p><b>Texto:</b> {text}</p>
-            <p><b>Keywords:</b> {', '.join(keywords) if keywords else 'N/A'}</p>
-            <p style='font-size: 0.9em; color: #666;'><b>Notas:</b> {notes}</p>
-            <p style='font-size: 0.85em; color: #999;'><b>Fuente:</b> {source}</p>
+        <!-- HEADER -->
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h1 style="margin: 0; font-size: 24px;">🛡️ Contract Guardian Report</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Análisis Legal Potenciado por Agente MCP + LLM</p>
         </div>
-        """
-    
+
+        <!-- STATS GRID -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <div style="background: var(--background-fill-secondary); padding: 20px; border-radius: 10px; text-align: center; border: 1px solid var(--border-color-primary);">
+                <div style="font-size: 32px; font-weight: bold; color: var(--body-text-color);">{result.total_clauses}</div>
+                <div style="font-size: 14px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Riesgos Detectados</div>
+            </div>
+            <div style="background: rgba(220, 38, 38, 0.1); padding: 20px; border-radius: 10px; text-align: center; border: 1px solid rgba(220, 38, 38, 0.3);">
+                <div style="font-size: 32px; font-weight: bold; color: #ef4444;">{result.high_risk_count}</div>
+                <div style="font-size: 14px; color: #ef4444; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Riesgo Alto</div>
+            </div>
+            <div style="background: rgba(217, 119, 6, 0.1); padding: 20px; border-radius: 10px; text-align: center; border: 1px solid rgba(217, 119, 6, 0.3);">
+                <div style="font-size: 32px; font-weight: bold; color: #f59e0b;">{result.medium_risk_count}</div>
+                <div style="font-size: 14px; color: #f59e0b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Riesgo Medio</div>
+            </div>
+            <div style="background: rgba(22, 163, 74, 0.1); padding: 20px; border-radius: 10px; text-align: center; border: 1px solid rgba(22, 163, 74, 0.3);">
+                <div style="font-size: 32px; font-weight: bold; color: #22c55e;">{result.low_risk_count}</div>
+                <div style="font-size: 14px; color: #22c55e; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Riesgo Bajo</div>
+            </div>
+        </div>
+
+        <!-- SECTIONS -->
+        <!-- Usamos variables CSS de Gradio para que se adapte al tema -->
+        <div style="background: var(--background-fill-primary); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color-primary); margin-bottom: 30px;">
+            <div style="background: var(--background-fill-secondary); padding: 15px 25px; border-bottom: 1px solid var(--border-color-primary); font-weight: bold; color: var(--body-text-color); display: flex; align-items: center;">
+                🤖 ANÁLISIS COMPLETO
+            </div>
+            <div style="padding: 25px; line-height: 1.6; color: var(--body-text-color);">
+                {markdown_to_html(result.llm_reasoning)}
+            </div>
+        </div>
+
+        <div style="background: var(--background-fill-primary); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color-primary); margin-bottom: 30px;">
+            <div style="background: rgba(234, 179, 8, 0.1); padding: 15px 25px; border-bottom: 1px solid rgba(234, 179, 8, 0.3); font-weight: bold; color: #eab308; display: flex; align-items: center;">
+                💡 RECOMENDACIONES / CONCLUSIÓN
+            </div>
+            <div style="padding: 25px; line-height: 1.6; color: var(--body-text-color);">
+                {markdown_to_html(result.recommendations)}
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; opacity: 0.6; font-size: 13px;">
+            Generado por Contract Guardian Agent v2.0 • No constituye asesoría legal profesional.
+        </div>
+    </div>
+    """
+
+
+def markdown_to_html(text):
+    """Convierte markdown básico a HTML para visualización simple."""
+    if not text: return ""
+    html = text.replace("\n", "<br>")
+    html = html.replace("**", "<b>").replace("**", "</b>")
     return html
 
 
@@ -266,187 +220,101 @@ def quick_search_article(topic: str) -> str:
 # INTERFAZ GRADIO
 # ============================================================
 
-def create_interface():
-    """Crea la interfaz Gradio."""
+with gr.Blocks(title="Contract Guardian Agent", theme=gr.themes.Soft(primary_hue="blue", secondary_hue="indigo")) as demo:
     
-    with gr.Blocks(title="Contract Guardian", theme=gr.themes.Soft()) as demo:
-        
-        # Header
-        gr.Markdown("""
-        # 🛡️ Contract Guardian - Auditor de Contratos IA
-        
-        Herramienta que analiza contratos y destaca cláusulas riesgosas o abusivas, 
-        ayudando a entender mejor antes de firmar.
-        
-        **⚠️ Aviso:** Esta herramienta es informativa y no constituye asesoría legal.
-        """)
-        
-        with gr.Tabs():
-            
-            # ============================================================
-            # TAB 1: ANÁLISIS COMPLETO
-            # ============================================================
-            with gr.Tab("📊 Análisis Completo"):
-                gr.Markdown("""
-                ### Analiza tu contrato
-                Pega el texto completo del contrato para obtener un análisis automático
-                de cláusulas riesgosas y referencias legales.
-                """)
-                
-                with gr.Row():
-                    with gr.Column():
-                        contract_input = gr.Textbox(
-                            label="📄 Contrato (pega aquí)",
-                            placeholder="Pega el texto completo del contrato...",
-                            lines=15,
-                            max_lines=50
-                        )
-                        
-                        search_mode = gr.Radio(
-                            choices=["auto", "manual"],
-                            value="auto",
-                            label="Modo de búsqueda",
-                            info="Auto: busca automáticamente palabras clave de riesgo"
-                        )
-                        
-                        analyze_btn = gr.Button(
-                            "🔍 Analizar Contrato",
-                            variant="primary",
-                            size="lg"
-                        )
-                    
-                    with gr.Column():
-                        output_html = gr.HTML(
-                            label="📋 Resultados",
-                            value="<p style='color: gray;'>Los resultados aparecerán aquí...</p>"
-                        )
-                        summary = gr.Textbox(
-                            label="📊 Resumen",
-                            interactive=False
-                        )
-                
-                analyze_btn.click(
-                    fn=analyze_contract,
-                    inputs=[contract_input, search_mode],
-                    outputs=[output_html, summary]
-                )
-            
-            # ============================================================
-            # TAB 2: BÚSQUEDA RÁPIDA
-            # ============================================================
-            with gr.Tab("🔎 Búsqueda Rápida"):
-                gr.Markdown("""
-                ### Busca un término legal específico
-                Ingresa un concepto legal para obtener artículos relevantes
-                de la base de datos de leyes españolas.
-                """)
-                
-                with gr.Row():
-                    with gr.Column():
-                        search_input = gr.Textbox(
-                            label="Término a buscar",
-                            placeholder="ej: fianza, vacaciones, despido, privacidad",
-                            lines=2
-                        )
-                        search_btn = gr.Button(
-                            "🔎 Buscar",
-                            variant="primary",
-                            size="lg"
-                        )
-                    
-                    with gr.Column():
-                        search_output = gr.HTML(
-                            label="Artículos Encontrados",
-                            value="<p style='color: gray;'>Los resultados aparecerán aquí...</p>"
-                        )
-                
-                search_btn.click(
-                    fn=quick_search_article,
-                    inputs=search_input,
-                    outputs=search_output
-                )
-            
-            # ============================================================
-            # TAB 3: INFORMACIÓN
-            # ============================================================
-            with gr.Tab("ℹ️ Información"):
-                gr.Markdown("""
-                ## 📚 Sobre Contract Guardian
-                
-                ### ¿Cómo funciona?
-                1. **Análisis de Contrato**: Identifica palabras clave de riesgo
-                2. **Búsqueda Legal**: Encuentra artículos relevantes en la base de datos
-                3. **Referencias**: Proporciona fuentes legales españolas
-                
-                ### Base de Datos
-                - **Derecho Laboral**: Estatuto de los Trabajadores (15 artículos)
-                - **Arrendamientos**: Ley de Arrendamientos Urbanos (15 artículos)
-                - **Términos de Servicio**: LSSI y Derecho del Consumidor (15 artículos)
-                
-                **Total: 45 artículos legales españoles reales**
-                
-                ### Categorías de Riesgo
-                
-                **🔴 RIESGO ALTO**
-                - Cláusulas abusivas
-                - Limitación de responsabilidad injustificada
-                - Rescisión unilateral
-                - Terminación sin causa
-                
-                **🟠 RIESGO MEDIO**
-                - Modificación unilateral de términos
-                - Suspensión de servicios
-                - Cambio de condiciones
-                - Arbitraje obligatorio
-                
-                **🟢 RIESGO BAJO**
-                - Actualización anual de precios
-                - Revisión de condiciones
-                - Prórroga automática
-                - Notificación requerida
-                
-                ### ⚠️ Importante
-                - **NO es asesoría legal**: Solo información
-                - **Consulta a un abogado**: Para interpretación legal real
-                - **Úsalo como referencia**: Como punto de partida para revisar
-                
-                ### 🚀 Tecnología
-                - **Backend**: FastAPI + MCP Servers
-                - **Frontend**: Gradio
-                - **Datos**: Leyes españolas reales del BOE
-                - **Análisis**: Búsqueda semántica + keywords
-                """)
+    # HEADER
+    gr.Markdown("""
+    # 🛡️ Contract Guardian - Agente MCP
+    ### 🤖 Análisis de Contratos con Inteligencia Artificial + Verificación Legal
+    """)
     
-    return demo
+    with gr.Tabs():
+        
+        # TAB 1: ANÁLISIS PRINCIPAL
+        with gr.Tab("🚀 Análisis de Contrato"):
+            
+            with gr.Row():
+                # COLUMNA IZQUIERDA: INPUTS Y ESTADO
+                with gr.Column(scale=1):
+                    gr.Markdown("### 1. Sube tu contrato")
+                    pdf_input = gr.File(
+                        label="📄 Archivo PDF",
+                        file_types=[".pdf"],
+                        file_count="single",
+                        type="filepath"
+                    )
+                    
+                    analyze_btn = gr.Button(
+                        "🚀 Analizar Ahora", 
+                        variant="primary", 
+                        size="lg"
+                    )
+                    
+                    gr.Markdown("### 📡 Estado del Agente")
+                    status_md = gr.Markdown(
+                        value="Esperando archivo...",
+                        elem_classes="status-box"
+                    )
+                
+                # COLUMNA DERECHA: RESULTADOS EN VIVO
+                with gr.Column(scale=2):
+                    gr.Markdown("### 💭 Pensamiento del Agente (En Vivo)")
+                    live_log = gr.Textbox(
+                        label="Streaming del LLM", 
+                        interactive=False, 
+                        lines=15,
+                        elem_id="live-log",
+                        autoscroll=True
+                    )
 
+            # SECCIÓN DE RESULTADOS FINALES
+            gr.Markdown("---")
+            gr.Markdown("### 📊 Resultados del Análisis")
+            
+            with gr.Tabs():
+                with gr.Tab("📑 Reporte Visual"):
+                    html_report = gr.HTML(label="Reporte Final")
+                
+                with gr.Tab("💾 JSON Estructurado"):
+                    json_result = gr.JSON(label="Datos Crudos")
 
-# ============================================================
-# MAIN
-# ============================================================
+        # TAB 2: CÓMO FUNCIONA
+        with gr.Tab("ℹ️ Cómo Funciona"):
+            gr.Markdown("""
+            ## 🧠 Arquitectura del Agente
+            
+            Este sistema utiliza una arquitectura **Agentic RAG (Retrieval-Augmented Generation)** potenciada por **MCP (Model Context Protocol)**.
+            
+            ### El Flujo de Trabajo:
+            
+            1.  **📄 Ingesta**: El agente lee tu PDF y extrae el texto crudo.
+            2.  **🤖 Análisis Inicial (LLM)**: Un modelo de IA (Qwen/DeepSeek) lee el contrato y detecta estructura y cláusulas clave.
+            3.  **🧠 Decisión**: El agente decide qué herramientas necesita para verificar la legalidad.
+            4.  **⚡ Llamadas Paralelas (MCP)**:
+                *   `classify_clauses`: Clasifica técnicamente cada cláusula.
+                *   `law_lookup`: Busca leyes específicas (LAU, Estatuto Trabajadores) en tiempo real.
+            5.  **⚖️ Razonamiento**: El LLM cruza la información del contrato con las leyes encontradas para detectar violaciones.
+            6.  **💡 Recomendación**: Genera consejos prácticos de negociación.
+            
+            ### Tecnologías:
+            *   **Orquestador**: Python Asyncio
+            *   **LLM**: Nebius API (Qwen-32B / DeepSeek-67B)
+            *   **Tools**: Protocolo MCP
+            *   **Frontend**: Gradio Streaming
+            """)
 
+    # EVENTOS
+    analyze_btn.click(
+        fn=run_analysis,
+        inputs=[pdf_input],
+        outputs=[status_md, live_log, html_report, json_result]
+    )
+
+# Lauch the app
 if __name__ == "__main__":
-    print("\n" + "="*70)
-    print("🛡️  CONTRACT GUARDIAN - Auditor de Contratos")
-    print("="*70 + "\n")
-    
-    # Verificar que law_retriever está disponible
-    if not check_law_retriever_health():
-        print("⚠️  ADVERTENCIA: law_retriever no está disponible")
-        print("Inicia el servidor con:")
-        print("  python mcp_servers/law_retriever/server.py")
-        print("\nContinuando... la app intentará conectar cuando sea necesario.\n")
-    else:
-        print("✅ law_retriever conectado en localhost:8001\n")
-    
-    # Crear y lanzar interfaz
-    demo = create_interface()
-    
-    print("🚀 Iniciando interfaz en http://localhost:7860")
-    print("Presiona CTRL+C para detener\n")
-    
-    demo.launch(
-        share=False,
-        server_name="localhost",
+    demo.queue().launch(
+        server_name="0.0.0.0", 
         server_port=7860,
+        share=False,
         show_error=True
     )

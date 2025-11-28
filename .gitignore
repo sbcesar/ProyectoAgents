@@ -1,0 +1,26 @@
+# --- Archivos de Sistema y Entorno ---
+.env
+.DS_Store
+Thumbs.db
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# --- Configuración Sensible (IMPORTANTE) ---
+config/nebius_config.py
+
+# --- Archivos Generados ---
+*.pdf
+*.log
+output/
+temp/
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.swp

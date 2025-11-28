@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-gradio
-pydantic
-requests
-pytest
-python-dotenv
