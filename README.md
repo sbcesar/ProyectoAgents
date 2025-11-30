@@ -36,6 +36,7 @@ El cerebro del sistema (`/agent`) implementa un bucle cognitivo **ReAct (Reason 
 
 ## 📂 Estructura del Proyecto
 
+```text
 PROYECTOAGENTS/
 ├── agent/                  # 🧠 Lógica del Agente (Orquestador + Cliente LLM)
 │   ├── llm_client.py       # Cliente compatible con OpenAI para Nebius
@@ -59,7 +60,7 @@ PROYECTOAGENTS/
 ├── README.md               # Documentación
 ├── requirements.txt        # Dependencias del proyecto
 └── start.py                # 🚀 Lanzador maestro (Servers + UI)
-
+```
 
 
 ---
