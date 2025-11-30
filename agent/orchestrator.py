@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-agent/orchestrator_with_llm.py
-ESTRATEGIA: AGENTE REACT (Reason + Act)
-El LLM recibe el texto y DECIDE si llamar herramientas o responder.
+agent/orchestrator.py
+Orquestador Agente ReAct optimizado y limpio.
 """
 
 import logging
 import json
 import asyncio
-from typing import AsyncIterator, Dict, Any
+from typing import AsyncIterator, Dict, Any, Optional
 
 from agent.llm_client import get_llm_client
 from agent.mcp_tools import MCPToolsManager
 from agent.pdf_processor import PDFProcessor
+from agent.models import AnalysisResult
+from agent.prompts import AGENT_SYSTEM_PROMPT, format_user_initial_msg
 from config.nebius_config import NEBIUS_MODEL
 
 logger = logging.getLogger(__name__)
@@ -24,55 +25,38 @@ class OrchestratorWithLLM:
         self.pdf_processor = PDFProcessor()
 
     async def analyze_contract_streaming(self, pdf_path: str) -> AsyncIterator[Dict]:
-        """
-        Bucle principal del Agente.
-        1. Lee PDF
-        2. Piensa (LLM)
-        3. Si el LLM pide herramienta -> Ejecuta y vuelve a pensar.
-        4. Si el LLM da respuesta final -> Termina.
-        """
+        """Bucle principal del Agente ReAct."""
         
         # 1. LEER PDF
         yield {"status": "extracting", "message": "Leyendo documento..."}
-        contract_text = self.pdf_processor.extract_text(pdf_path)
-        contract_preview = contract_text[:3000] # Limitamos para no saturar contexto rápido
+        try:
+            contract_text = self.pdf_processor.extract_text(pdf_path)
+            # Limitamos contexto para eficiencia (8000 chars es bastante seguro)
+            contract_preview = contract_text[:8000] 
+        except Exception as e:
+            yield {"status": "error", "message": f"Error leyendo PDF: {str(e)}"}
+            return
 
-        # DEFINICIÓN DE HERRAMIENTAS PARA EL LLM (SISTEMA PROMPT)
-        system_prompt = """Eres Contract Guardian, un auditor experto IA.
-        
-TIENES DISPONIBLES ESTAS HERRAMIENTAS EXTERNAS (MCP):
-1. `consultar_ley(tema)`: Busca leyes oficiales españolas. Úsala ante dudas legales.
-2. `clasificar_texto(texto)`: Detecta si un texto es abusivo/riesgoso.
-
-TU PROCESO DE PENSAMIENTO:
-1. Analiza el texto del usuario.
-2. Si detectas posibles infracciones o dudas, DEBES usar las herramientas.
-3. Para usar una herramienta, responde SOLO con este formato JSON:
-   {"tool": "consultar_ley", "args": "fianza alquiler maximo"}
-   
-4. Si ya tienes la información, responde con tu análisis final empezando con "INFORME FINAL:".
-"""
-
-        # HISTORIAL DE CONVERSACIÓN
+        # 2. PREPARAR CONVERSACIÓN (Usando prompts centralizados)
         messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Analiza este documento y detecta infracciones:\n\n{contract_preview}..."}
+            {"role": "system", "content": AGENT_SYSTEM_PROMPT},
+            {"role": "user", "content": format_user_initial_msg(contract_preview)}
         ]
 
-        # BUCLE DE AGENTE (MÁXIMO 3 VUELTAS PARA NO ENTRAR EN LOOP INFINITO)
-        for turn in range(3):
+        # 3. BUCLE DE AGENTE (Thinking Loop)
+        MAX_TURNS = 5  # Pasos máximos de pensamiento
+        
+        for turn in range(MAX_TURNS):
+            yield {"status": "analyzing", "message": f"Paso {turn+1}: Analizando..."}
             
-            # --- PENSAMIENTO DEL LLM ---
-            yield {"status": "analyzing", "message": f"El Agente está pensando (Paso {turn+1})..."}
-            
-            # Llamada al LLM (No streaming aquí para poder procesar JSON)
+            # --- LLAMADA AL LLM (STREAMING) ---
             response_full = ""
             try:
-                # Usamos el cliente raw de openai para tener control total aquí
+                # Usamos el cliente raw para control total del streaming
                 stream = self.llm_client.client.chat.completions.create(
                     model=NEBIUS_MODEL,
                     messages=messages,
-                    temperature=0.1, # Precisión para tools
+                    temperature=0.1, # Precisión alta para tools
                     stream=True
                 )
                 
@@ -80,120 +64,111 @@ TU PROCESO DE PENSAMIENTO:
                     if chunk.choices[0].delta.content:
                         content = chunk.choices[0].delta.content
                         response_full += content
-                        # Mostrar pensamiento en vivo
                         yield {"status": "analyzing_chunk", "chunk": content}
             
             except Exception as e:
-                yield {"status": "error", "message": str(e)}
+                logger.error(f"LLM Error: {e}")
+                yield {"status": "error", "message": "Error de conexión con la IA."}
                 return
 
-            # --- DECISIÓN: ¿USAR HERRAMIENTA O TERMINAR? ---
-            
-            # Intentamos detectar si quiere usar una tool (buscamos JSON)
+            # --- DETECCIÓN DE HERRAMIENTAS ---
             tool_call = self._parse_tool_call(response_full)
             
             if tool_call:
+                # El LLM quiere usar una herramienta
                 tool_name = tool_call.get("tool")
                 tool_args = tool_call.get("args")
                 
-                yield {"status": "mcp_calls", "message": f"🛠️ Ejecutando herramienta: {tool_name}..."}
+                yield {"status": "mcp_calls", "message": f"🛠️ Usando: {tool_name} ('{tool_args}')..."}
                 
-                # EJECUTAR HERRAMIENTA MCP
-                tool_result = ""
-                if tool_name == "consultar_ley":
-                    res = self.mcp_tools.law_lookup(tool_args)
-                    tool_result = json.dumps(res, ensure_ascii=False)
-                elif tool_name == "clasificar_texto":
-                    res = self.mcp_tools.classify_clauses(contract_text[:1000]) # Muestra
-                    tool_result = json.dumps(res, ensure_ascii=False)
+                # Ejecutar Tool
+                tool_result_str = self._execute_tool(tool_name, tool_args, contract_text)
                 
                 yield {"status": "mcp_done", "message": "Datos obtenidos."}
                 
-                # AÑADIR RESULTADO AL CONTEXTO Y SEGUIR
+                # Añadir al historial para que el LLM lo vea en la siguiente vuelta
                 messages.append({"role": "assistant", "content": response_full})
-                messages.append({"role": "user", "content": f"RESULTADO DE HERRAMIENTA ({tool_name}): {tool_result}. Continúa tu análisis."})
+                messages.append({"role": "user", "content": f"RESULTADO HERRAMIENTA ({tool_name}): {tool_result_str}"})
                 
             else:
-                # Si no pide herramienta, asumimos que es la respuesta final
-                yield {
-                    "status": "complete", 
-                    "result": self._create_dummy_result(contract_text, response_full)
-                }
-                break
+                # Si no hay tool call, asumimos respuesta final o pensamiento intermedio
+                if "INFORME FINAL" in response_full.upper():
+                    result_obj = self._create_result_object(response_full)
+                    yield {"status": "complete", "result": result_obj}
+                    break
+                
+                # Si no es final, seguimos el bucle añadiendo contexto
+                messages.append({"role": "assistant", "content": response_full})
 
-    def _parse_tool_call(self, text):
-        """Intenta encontrar un JSON de llamada a herramienta en el texto del LLM."""
+    def _parse_tool_call(self, text: str) -> Optional[Dict]:
+        """Busca JSONs válidos en la respuesta del LLM."""
         try:
-            # Buscamos el primer { y el último }
+            # Buscamos patrón simple de JSON { ... }
             start = text.find("{")
             end = text.rfind("}") + 1
             if start != -1 and end != -1:
                 json_str = text[start:end]
-                return json.loads(json_str)
-        except:
-            return None
+                data = json.loads(json_str)
+                if "tool" in data:
+                    return data
+        except json.JSONDecodeError:
+            pass
         return None
 
-    def _create_dummy_result(self, text, analysis):
-        """
-        Crea un resultado estructurado analizando el texto generado por el LLM.
-        Intenta separar el informe en secciones lógicas para la UI.
-        """
-        # 1. Intentar separar Recomendaciones
-        recommendations = ""
-        reasoning = analysis
-        initial = "Análisis realizado mediante Agente ReAct con herramientas MCP."
-        
-        if "Recomendación" in analysis or "Conclusión" in analysis:
-            # Buscamos dónde empieza la conclusión/recomendación
-            parts = analysis.split("Conclusión")
-            if len(parts) > 1:
-                reasoning = parts[0]
-                recommendations = "Conclusión" + parts[1]
+    def _execute_tool(self, name: str, args: str, full_text: str) -> str:
+        """Ejecuta la herramienta solicitada."""
+        try:
+            if name == "consultar_ley":
+                res = self.mcp_tools.law_lookup(args)
+                return json.dumps(res, ensure_ascii=False)
+            elif name == "clasificar_texto":
+                res = self.mcp_tools.classify_clauses(full_text[:2000])
+                return json.dumps(res, ensure_ascii=False)
             else:
-                parts = analysis.split("Recomendaciones")
-                if len(parts) > 1:
-                    reasoning = parts[0]
-                    recommendations = "Recomendaciones" + parts[1]
+                return f"Error: Herramienta '{name}' no existe."
+        except Exception as e:
+            return f"Error ejecutando herramienta: {str(e)}"
 
-        # 2. Contar infracciones para los contadores (Heurística simple)
-        # Contamos palabras clave como "Infracción", "Incorrecto", "Abusiva"
-        keywords_high = ["ilegal", "fraude", "infracción", "abusiva", "grave"]
-        keywords_medium = ["incorrecto", "error", "revisar"]
+    def _create_result_object(self, analysis_text: str) -> AnalysisResult:
+        """
+        Parsea el texto final para llenar el objeto AnalysisResult.
+        """
+        reasoning = analysis_text
+        recommendations = ""
         
-        analysis_lower = analysis.lower()
-        high_risk = sum(analysis_lower.count(w) for w in keywords_high)
-        medium_risk = sum(analysis_lower.count(w) for w in keywords_medium)
+        # Separar secciones comunes
+        separators = ["Conclusión", "Recomendaciones", "Resumen"]
+        for sep in separators:
+            if sep in analysis_text:
+                parts = analysis_text.split(sep, 1)
+                reasoning = parts[0]
+                recommendations = f"**{sep}**" + parts[1]
+                break
         
-        # Ajuste para no contar demasiado (un texto puede repetir la misma palabra)
-        high_risk = min(high_risk, 5) 
+        if not recommendations:
+            recommendations = "Ver detalles en el análisis principal."
+
+        # Contar Riesgos (Heurística)
+        keywords_high = ["ilegal", "fraude", "nula", "abusiva", "grave", "infracción"]
+        keywords_medium = ["incorrecto", "revisar", "duda", "riesgo"]
+        
+        text_lower = analysis_text.lower()
+        high_risk = sum(text_lower.count(w) for w in keywords_high)
+        medium_risk = sum(text_lower.count(w) for w in keywords_medium)
+        
+        # Ajuste de contadores
+        high_risk = min(high_risk, 5)
         medium_risk = min(medium_risk, 5)
-        total_clauses = high_risk + medium_risk
-
-        from dataclasses import dataclass
-        @dataclass
-        class Result:
-            initial_analysis: str
-            mcp_classification: dict
-            mcp_laws: dict
-            llm_reasoning: str
-            recommendations: str
-            total_clauses: int
-            high_risk_count: int
-            medium_risk_count: int
-            low_risk_count: int
-
-        return Result(
-            initial_analysis=initial,
-            mcp_classification={}, # No usado en modo ReAct
-            mcp_laws={},           # No usado en modo ReAct
-            llm_reasoning=reasoning,     # Aquí va el cuerpo del análisis
-            recommendations=recommendations if recommendations else "Ver detalles en el razonamiento.",
-            total_clauses=total_clauses,
+        
+        return AnalysisResult(
+            initial_analysis="Análisis ReAct Completo",
+            llm_reasoning=reasoning,
+            recommendations=recommendations,
+            total_clauses=high_risk + medium_risk,
             high_risk_count=high_risk,
             medium_risk_count=medium_risk,
             low_risk_count=0
         )
 
-
+# Instancia global necesaria para la UI
 orchestrator = OrchestratorWithLLM()

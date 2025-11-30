@@ -220,7 +220,8 @@ def markdown_to_html(text):
 # INTERFAZ GRADIO
 # ============================================================
 
-with gr.Blocks(title="Contract Guardian Agent", theme=gr.themes.Soft(primary_hue="blue", secondary_hue="indigo")) as demo:
+mi_tema = gr.themes.Soft(primary_hue="blue", secondary_hue="indigo")
+with gr.Blocks(title="Contract Guardian Agent") as demo:
     
     # HEADER
     gr.Markdown("""

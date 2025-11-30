@@ -1,0 +1,19 @@
+# --- Core IA & API ---
+openai>=1.0.0
+python-dotenv>=1.0.0
+httpx>=0.24.0
+
+# --- Servidores MCP & Web ---
+fastapi>=0.100.0
+uvicorn>=0.20.0
+mcp>=0.1.0
+requests>=2.31.0
+
+# --- Procesamiento de Documentos ---
+pypdf>=3.0.0
+
+# --- Interfaz de Usuario ---
+gradio>=4.0.0
+
+# --- Utilidades ---
+aiofiles>=23.0.0
